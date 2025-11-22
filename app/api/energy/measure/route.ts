@@ -1,12 +1,12 @@
 // app/api/energy/measure/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { SupportedLanguage, RealEnergyMeasurement } from "@/lib/types";
+import { SupportedLanguage } from "@/lib/types";
 
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || "http://localhost:5001";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json() as { language?: SupportedLanguage; code?: string; stdin?: string };
+    const body = await request.json();
     const { language, code, stdin } = body;
 
     // Validate
@@ -17,18 +17,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // CodeCarbon only supports Python
-    if (language !== "python") {
+    // All languages now supported!
+    const supportedLanguages: SupportedLanguage[] = ["python", "javascript", "cpp", "java"];
+    if (!supportedLanguages.includes(language as SupportedLanguage)) {
       return NextResponse.json(
         { 
-          error: "Real energy measurement only supports Python",
-          hint: "Use the pattern-based analysis for JavaScript and C++"
+          error: `Language not supported for energy measurement`,
+          supported: supportedLanguages
         },
         { status: 400 }
       );
     }
 
-    // Call Python microservice
+    // Call Python microservice (now handles all languages)
     const response = await fetch(`${PYTHON_SERVICE_URL}/measure`, {
       method: "POST",
       headers: {
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       const errorData = await response.json();
       return NextResponse.json(
         { 
-          error: "Python service error", 
+          error: "Measurement service error", 
           details: errorData 
         },
         { status: response.status }
@@ -53,36 +54,16 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    // Basic shape validation before returning
-    const measurement: RealEnergyMeasurement = {
-      status: data.status || "success",
-      output: data.output || "",
-      error: data.error,
-      executionTime: data.executionTime ?? (data.time_ms ?? 0),
-      energy: {
-        total_kwh: data.energy?.total_kwh ?? data.total_kwh ?? 0,
-        total_wh: data.energy?.total_wh ?? data.total_wh ?? 0,
-        total_mj: data.energy?.total_mj ?? data.total_mj ?? 0,
-        co2_emissions_kg: data.energy?.co2_emissions_kg ?? data.co2_emissions_kg ?? 0,
-        co2_emissions_g: data.energy?.co2_emissions_g ?? data.co2_emissions_g ?? 0,
-      },
-      hardware: {
-        cpu_energy: data.hardware?.cpu_energy ?? "0",
-        gpu_energy: data.hardware?.gpu_energy ?? "0",
-        ram_energy: data.hardware?.ram_energy ?? "0",
-      },
-      measurement_method: "codecarbon",
-    };
-    return NextResponse.json(measurement);
+    return NextResponse.json(data);
 
   } catch (error) {
     console.error("Measurement error:", error);
     
     // Check if Python service is running
-    if ((error as NodeJS.ErrnoException).code === 'ECONNREFUSED') {
+    if ((error as { code?: string }).code === 'ECONNREFUSED') {
       return NextResponse.json(
         { 
-          error: "Python service not available",
+          error: "Energy measurement service not available",
           hint: "Make sure the Python service is running on port 5001",
           setup: "cd python-service && python energy_service.py"
         },
@@ -99,7 +80,6 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    // Health check for Python service
     const response = await fetch(`${PYTHON_SERVICE_URL}/health`, {
       method: "GET",
     });
@@ -108,18 +88,18 @@ export async function GET() {
       const data = await response.json();
       return NextResponse.json({
         status: "available",
-        pythonService: data,
+        service: data,
       });
     } else {
       return NextResponse.json({
         status: "unavailable",
-        message: "Python service not responding",
+        message: "Service not responding",
       });
     }
-  } catch {
+  } catch (error) {
     return NextResponse.json({
       status: "unavailable",
-      message: "Python service not running",
+      message: "Service not running",
       hint: "Start with: cd python-service && python energy_service.py",
     });
   }
