@@ -13,7 +13,7 @@ export interface RunResponse {
   error?: string;
   executionTime?: number;
   status: "success" | "error" | "idle";
-  memoryUsed?: number; // optional memory usage in KB from external services
+  memoryUsed?: number;
 }
 
 export interface Hotspot {
@@ -40,6 +40,27 @@ export interface EnergyAnalysisRequest {
 // Extended response including suggestions list
 export interface EnergyAnalysisResponse extends EnergyAnalysis {
   suggestions: string[];
+}
+
+// NEW: Real energy measurement from CodeCarbon
+export interface RealEnergyMeasurement {
+  status: "success" | "error";
+  output: string;
+  error?: string;
+  executionTime: number; // milliseconds
+  energy: {
+    total_kwh: number;
+    total_wh: number;
+    total_mj: number;
+    co2_emissions_kg: number;
+    co2_emissions_g: number;
+  };
+  hardware: {
+    cpu_energy: string;
+    gpu_energy: string;
+    ram_energy: string;
+  };
+  measurement_method: "codecarbon";
 }
 
 export interface MetricData {

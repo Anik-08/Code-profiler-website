@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 /.history
 /.next
+
+/python-service/__pycache__/
+/python-service/venv/

@@ -25,10 +25,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Analyze energy consumption patterns
+    // Analyze energy consumption patterns (existing pattern-based analysis)
     const analysis = analyzeEnergy(language as SupportedLanguage, code);
 
-    return NextResponse.json(analysis);
+    return NextResponse.json({
+      ...analysis,
+      method: "pattern-based",
+      note: "This is a static code analysis. For real hardware measurement, use /api/energy/measure endpoint."
+    });
   } catch (error) {
     console.error("Energy analysis error:", error);
     return NextResponse.json(

@@ -18,7 +18,7 @@ import { EditorPanel } from "./components/editor/EditorPanel";
 
 // Output components
 import { OutputPanel } from "./components/output/OutputPanel";
-import { EnergyAnalysisPanel } from "./components/output/EnergyAnalysis";
+import { EnergyComparison } from "./components/output/EnergyComparison";
 
 // Hooks
 import { useCodeRunner } from "./hooks/useCodeRunner";
@@ -69,7 +69,14 @@ export default function DashboardPage() {
 
   // Custom hooks for code execution and analysis
   const { output, status, executionTime, isRunning, runCode } = useCodeRunner();
-  const { analysis, isAnalyzing, analyze } = useEnergyAnalysis();
+  const {
+    patternAnalysis,
+    realMeasurement,
+    isAnalyzing,
+    isMeasuring,
+    error,
+    analyzeBoth,
+  } = useEnergyAnalysis();
 
   // Handle language change
   const handleLanguageChange = useCallback((newLang: SupportedLanguage) => {
@@ -82,16 +89,16 @@ export default function DashboardPage() {
     setCode(newCode);
   }, []);
 
-  // Run code and analyze
+  // Run code and analyze (both pattern + real measurement)
   const handleRun = useCallback(async () => {
     await runCode(language, code);
-    analyze(language, code);
-  }, [language, code, runCode, analyze]);
+    await analyzeBoth(language, code);
+  }, [language, code, runCode, analyzeBoth]);
 
-  // Analyze only
-  const handleAnalyze = useCallback(() => {
-    analyze(language, code);
-  }, [language, code, analyze]);
+  // Analyze only (both methods)
+  const handleAnalyze = useCallback(async () => {
+    await analyzeBoth(language, code);
+  }, [language, code, analyzeBoth]);
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
@@ -131,7 +138,7 @@ export default function DashboardPage() {
                 onRun={handleRun}
                 onAnalyze={handleAnalyze}
                 isRunning={isRunning}
-                isAnalyzing={isAnalyzing}
+                isAnalyzing={isAnalyzing || isMeasuring}
               />
             </div>
 
@@ -144,8 +151,21 @@ export default function DashboardPage() {
                 executionTime={executionTime}
               />
 
-              {/* Energy Analysis Panel */}
-              <EnergyAnalysisPanel analysis={analysis} />
+              {/* Energy Analysis Panel - NEW COMPONENT */}
+              <div className="flex-1 rounded-2xl border border-slate-700/50 bg-linear-to-br from-slate-800/30 to-slate-900/50 overflow-hidden">
+                <EnergyComparison
+                  patternAnalysis={patternAnalysis}
+                  realMeasurement={realMeasurement}
+                  language={language}
+                />
+              </div>
+
+              {/* Error Display */}
+              {error && (
+                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-lg">
+                  <p className="text-sm text-rose-300">⚠️ {error}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

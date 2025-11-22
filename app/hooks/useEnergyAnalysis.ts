@@ -1,126 +1,99 @@
-// hooks/useEnergyAnalysis.ts
+// app/hooks/useEnergyAnalysis.ts
 
 import { useState, useCallback } from "react";
-import { SupportedLanguage, EnergyAnalysis, Hotspot } from "../../lib/types";
-
-const PATTERNS: Record<string, { 
-  regex: RegExp; 
-  type: Hotspot["type"]; 
-  score: number; 
-  suggestion: string;
-}[]> = {
-  javascript: [
-    { 
-      regex: /for\s*\([^)]*\)[\s\S]*?for\s*\([^)]*\)/g, 
-      type: "loop", 
-      score: 0.82, 
-      suggestion: "Nested loops detected. Consider using a hash map for O(n) lookup." 
-    },
-    { 
-      regex: /\.forEach[\s\S]*?\.forEach/g, 
-      type: "loop", 
-      score: 0.75, 
-      suggestion: "Nested forEach. Use reduce or single loop with object lookup." 
-    },
-    { 
-      regex: /\.filter\([^)]*\)\.map/g, 
-      type: "algorithm", 
-      score: 0.5, 
-      suggestion: "Chained filter/map. Consider using reduce for single pass." 
-    },
-  ],
-  python: [
-    { 
-      regex: /for\s+\w+\s+in[\s\S]*?for\s+\w+\s+in/g, 
-      type: "loop", 
-      score: 0.82, 
-      suggestion: "Nested loops detected. Consider using set/dict for O(1) lookup." 
-    },
-    { 
-      regex: /\.append\([^)]*\)/g, 
-      type: "memory", 
-      score: 0.4, 
-      suggestion: "Dynamic list growth. Consider list comprehension or pre-allocation." 
-    },
-  ],
-  cpp: [
-    { 
-      regex: /for\s*\([^)]*\)[\s\S]*?for\s*\([^)]*\)/g, 
-      type: "loop", 
-      score: 0.82, 
-      suggestion: "Nested loops detected. Consider using unordered_map for O(1) lookup." 
-    },
-    { 
-      regex: /\.push_back\(/g, 
-      type: "memory", 
-      score: 0.45, 
-      suggestion: "Dynamic vector growth. Use reserve() to pre-allocate capacity." 
-    },
-  ],
-};
-
-function getLineNumber(code: string, index: number): number {
-  return code.substring(0, index).split("\n").length;
-}
+import { SupportedLanguage, EnergyAnalysis, RealEnergyMeasurement } from "../../lib/types";
 
 export function useEnergyAnalysis() {
-  const [analysis, setAnalysis] = useState<EnergyAnalysis | null>(null);
+  const [patternAnalysis, setPatternAnalysis] = useState<EnergyAnalysis | null>(null);
+  const [realMeasurement, setRealMeasurement] = useState<RealEnergyMeasurement | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isMeasuring, setIsMeasuring] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const analyze = useCallback((language: SupportedLanguage, code: string) => {
+  // Pattern-based analysis (existing)
+  const analyzePattern = useCallback(async (language: SupportedLanguage, code: string) => {
     setIsAnalyzing(true);
+    setError(null);
 
-    // Simulate async analysis
-    setTimeout(() => {
-      const patterns = PATTERNS[language] || PATTERNS.javascript;
-      const hotspots: Hotspot[] = [];
-
-      for (const pattern of patterns) {
-        const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
-        let match;
-
-        while ((match = regex.exec(code)) !== null) {
-          const startLine = getLineNumber(code, match.index);
-          const endLine = getLineNumber(code, match.index + match[0].length);
-
-          hotspots.push({
-            startLine,
-            endLine,
-            score: pattern.score + Math.random() * 0.1,
-            estimate_mJ: (endLine - startLine + 1) * 0.01,
-            suggestion: pattern.suggestion,
-            type: pattern.type,
-          });
-        }
-      }
-
-      // Sort by score descending
-      hotspots.sort((a, b) => b.score - a.score);
-
-      // Calculate file score
-      const avgScore = hotspots.length > 0
-        ? hotspots.reduce((sum, h) => sum + h.score, 0) / hotspots.length
-        : 0;
-      const fileScore = Math.max(0.1, 1 - avgScore * 0.5);
-
-      setAnalysis({
-        fileScore,
-        hotspots: hotspots.slice(0, 5),
-        totalEstimate_mJ: hotspots.reduce((sum, h) => sum + h.estimate_mJ, 0),
+    try {
+      const response = await fetch("/api/energy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language, code }),
       });
 
+      if (!response.ok) {
+        throw new Error("Pattern analysis failed");
+      }
+
+      const data = await response.json();
+      setPatternAnalysis({
+        fileScore: data.fileScore,
+        hotspots: data.hotspots,
+        totalEstimate_mJ: data.totalEstimate_mJ,
+      });
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
       setIsAnalyzing(false);
-    }, 800);
+    }
   }, []);
 
+  // Real measurement using CodeCarbon (NEW)
+  const measureReal = useCallback(async (language: SupportedLanguage, code: string) => {
+    setIsMeasuring(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/energy/measure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language, code, stdin: "" }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.hint || "Measurement failed");
+      }
+
+      const data = await response.json();
+      setRealMeasurement(data);
+    } catch (err) {
+      setError((err as Error).message);
+      setRealMeasurement(null);
+    } finally {
+      setIsMeasuring(false);
+    }
+  }, []);
+
+  // Run both analyses
+  const analyzeBoth = useCallback(async (language: SupportedLanguage, code: string) => {
+    // Always run pattern analysis
+    await analyzePattern(language, code);
+
+    // Run real measurement only for Python
+    if (language === "python") {
+      await measureReal(language, code);
+    } else {
+      setRealMeasurement(null);
+    }
+  }, [analyzePattern, measureReal]);
+
   const reset = useCallback(() => {
-    setAnalysis(null);
+    setPatternAnalysis(null);
+    setRealMeasurement(null);
+    setError(null);
   }, []);
 
   return {
-    analysis,
+    patternAnalysis,
+    realMeasurement,
     isAnalyzing,
-    analyze,
+    isMeasuring,
+    error,
+    analyzePattern,
+    measureReal,
+    analyzeBoth,
     reset,
   };
 }
