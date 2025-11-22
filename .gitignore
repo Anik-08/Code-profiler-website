@@ -10,15 +10,12 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# testin
 
 # next.js
-/.next/
-/out/
+
 
 # production
-/build
 
 # misc
 .DS_Store
@@ -37,10 +34,6 @@ yarn-error.log*
 .vercel
 
 # typescript
-*.tsbuildinfo
-next-env.d.ts
-/.history
-/.next
 
 /python-service/__pycache__/
 /python-service/venv/
