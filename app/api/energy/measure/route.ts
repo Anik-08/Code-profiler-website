@@ -2,14 +2,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SupportedLanguage } from "@/lib/types";
 
-const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || "http://localhost:5001";
+// Use environment variable in production
+const PYTHON_SERVICE_URL = 
+  process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 
+  process.env.PYTHON_SERVICE_URL || 
+  "http://localhost:5001";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { language, code, stdin } = body;
 
-    // Validate
     if (!language || !code) {
       return NextResponse.json(
         { error: "Language and code are required" },
@@ -17,7 +20,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // All languages now supported!
     const supportedLanguages: SupportedLanguage[] = ["python", "javascript", "cpp", "java"];
     if (!supportedLanguages.includes(language as SupportedLanguage)) {
       return NextResponse.json(
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Python microservice (now handles all languages)
+    // Call Python microservice
     const response = await fetch(`${PYTHON_SERVICE_URL}/measure`, {
       method: "POST",
       headers: {
@@ -59,13 +61,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Measurement error:", error);
     
-    // Check if Python service is running
-    if ((error as { code?: string }).code === 'ECONNREFUSED') {
+    if ((error as unknown as { code?: string }).code === 'ECONNREFUSED') {
       return NextResponse.json(
         { 
           error: "Energy measurement service not available",
-          hint: "Make sure the Python service is running on port 5001",
-          setup: "cd python-service && python energy_service.py"
+          hint: "Backend service may be starting up (can take 1-2 min on free tier)",
         },
         { status: 503 }
       );
@@ -100,7 +100,6 @@ export async function GET() {
     return NextResponse.json({
       status: "unavailable",
       message: "Service not running",
-      hint: "Start with: cd python-service && python energy_service.py",
     });
   }
 }

@@ -1,4 +1,4 @@
-// app/hooks/useAIOptimization.ts
+// app/hooks/useAIOptimization.ts - Update fetch URL
 
 import { useState, useCallback } from "react";
 import { SupportedLanguage, Hotspot } from "../../lib/types";
@@ -21,6 +21,10 @@ export interface OptimizationResult {
   confidence?: number;
 }
 
+const PYTHON_SERVICE_URL = 
+  process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 
+  "http://localhost:5001";
+
 export function useAIOptimization() {
   const [optimizations, setOptimizations] = useState<OptimizationResult | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -36,7 +40,7 @@ export function useAIOptimization() {
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:5001/optimize", {
+      const response = await fetch(`${PYTHON_SERVICE_URL}/optimize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
