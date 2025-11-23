@@ -1,4 +1,4 @@
-// app/hooks/useAIOptimization.ts - Update fetch URL
+// app/hooks/useAIOptimization.ts
 
 import { useState, useCallback } from "react";
 import { SupportedLanguage, Hotspot } from "../../lib/types";
@@ -19,11 +19,8 @@ export interface OptimizationResult {
   suggestions: OptimizationSuggestion[];
   ai_available?: boolean;
   confidence?: number;
+  error?: string;
 }
-
-const PYTHON_SERVICE_URL = 
-  process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 
-  "http://localhost:5001";
 
 export function useAIOptimization() {
   const [optimizations, setOptimizations] = useState<OptimizationResult | null>(null);
@@ -40,7 +37,8 @@ export function useAIOptimization() {
     setError(null);
 
     try {
-      const response = await fetch(`${PYTHON_SERVICE_URL}/optimize`, {
+      // Use Next.js API route instead of direct backend call
+      const response = await fetch("/api/optimize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -59,7 +57,7 @@ export function useAIOptimization() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Optimization failed");
+        throw new Error(errorData.error || errorData.hint || "Optimization failed");
       }
 
       const data = await response.json();

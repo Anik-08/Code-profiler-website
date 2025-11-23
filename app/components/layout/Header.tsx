@@ -32,8 +32,8 @@ export function Header({
         {/* User Info */}
         <div className="flex items-center gap-4">
           <StorageManager />
-          <LevelBadge level={level} />
-          <UserAvatar />
+          {/* <LevelBadge level={level} />
+          <UserAvatar /> */}
 
         </div>
       </div>
