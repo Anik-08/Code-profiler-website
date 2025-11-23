@@ -3,7 +3,6 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Zap, FileText, Flame } from "lucide-react";
 
 // Layout components
 import { Sidebar } from "./components/layout/Sidebar";
@@ -16,8 +15,8 @@ import { FileAnalysisView } from "./components/pages/FileAnalysisView";
 import { MetricsView } from "./components/pages/MetricsView";
 
 // Types & Constants
-import { SupportedLanguage } from "../lib/types";
-import { DEFAULT_CODE } from "../lib/constants";
+import { SupportedLanguage } from "@/lib/types";
+import { DEFAULT_CODE } from "@/lib/constants";
 
 const STORAGE_KEY_PREFIX = "code-profiler-code-";
 const STORAGE_LANGUAGE_KEY = "code-profiler-last-language";
@@ -86,6 +85,8 @@ export default function MainPage() {
 
   const handleLanguageChange = useCallback((newLang: SupportedLanguage) => {
     setLanguage(newLang);
+    // Ensure code entry exists for new language (safety if defaults change)
+    setCodeByLanguage(prev => prev[newLang] ? prev : { ...prev, [newLang]: DEFAULT_CODE[newLang] });
   }, []);
 
   const handleCodeChange = useCallback((newCode: string) => {
@@ -101,7 +102,7 @@ export default function MainPage() {
   return (
     <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
       {/* Collapsible Sidebar */}
-      <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
+      <Sidebar currentPage={currentPage} onPageChange={(page: PageView) => setCurrentPage(page)} />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden bg-linear-to-br from-slate-900 via-slate-900 to-violet-950/30">

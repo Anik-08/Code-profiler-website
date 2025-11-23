@@ -15,15 +15,16 @@ import {
   HelpCircle
 } from "lucide-react";
 
+import type { PageView } from "@/app/page";
 interface SidebarProps {
-  currentPage: string;
-  onPageChange: (page: string) => void;
+  currentPage: PageView;
+  onPageChange: (page: PageView) => void;
 }
 
 export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const menuItems = [
+  const menuItems: { icon: React.ElementType; label: string; page: PageView }[] = [
     { 
       icon: LayoutDashboard, 
       label: "Dashboard", 
@@ -46,18 +47,18 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
     },
   ];
 
-  const bottomItems = [
-    { 
-      icon: Settings, 
-      label: "Settings", 
-      page: "settings",
-    },
-    { 
-      icon: HelpCircle, 
-      label: "Help", 
-      page: "help",
-    },
-  ];
+  // const bottomItems: { icon: React.ElementType; label: string; page: PageView }[] = [
+  //   { 
+  //     icon: Settings, 
+  //     label: "Settings", 
+  //     page: "settings",
+  //   },
+  //   { 
+  //     icon: HelpCircle, 
+  //     label: "Help", 
+  //     page: "help",
+  //   },
+  // ];
 
   return (
     <aside
@@ -102,7 +103,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
       </nav>
 
       {/* Bottom Navigation */}
-      <div className="px-2 py-4 border-t border-slate-800/50 space-y-1">
+      {/* <div className="px-2 py-4 border-t border-slate-800/50 space-y-1">
         {bottomItems.map((item, index) => (
           <SidebarItem
             key={index}
@@ -113,7 +114,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
             onClick={() => onPageChange(item.page)}
           />
         ))}
-      </div>
+      </div> */}
 
       {/* Manual Toggle Button */}
       <button
